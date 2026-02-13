@@ -8,7 +8,6 @@ timm
 easydict
 einops
 torchmetrics
-mosaicml-composer
 datasets
 Pillow
 tqdm
