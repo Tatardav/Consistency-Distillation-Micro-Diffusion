@@ -1,0 +1,17 @@
+torch>=2.0.0
+torchvision
+accelerate
+diffusers
+transformers
+open_clip_torch
+timm
+easydict
+einops
+torchmetrics
+mosaicml-composer
+datasets
+Pillow
+tqdm
+numpy
+matplotlib
+huggingface_hub
