@@ -12,7 +12,6 @@ def consistency_sample(
     num_steps=4, sigma_min=0.002, sigma_max=80.0, rho=7.0,
     device='cuda', generator=None,
 ):
-    """Multi-step consistency sampling: denoise → re-noise → denoise → ..."""
     sigmas = get_sigmas(num_steps, sigma_min, sigma_max, rho, device=device)
     x = torch.randn(latent_shape, device=device, generator=generator) * sigmas[0]
 
@@ -33,7 +32,6 @@ def consistency_sample(
 
 @torch.no_grad()
 def generate_images(student_dit, model, prompts, num_steps=4, seed=None, device='cuda'):
-    """Generate images from prompts using the consistency model."""
     generator = torch.Generator(device=device)
     if seed is not None:
         generator = generator.manual_seed(seed)

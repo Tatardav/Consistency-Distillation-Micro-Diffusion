@@ -38,33 +38,24 @@ def cd_loss(
     loss_type='huber', huber_c=0.001,
     weight_dtype=torch.float16
 ):
-    """
-    Consistency Distillation loss (EDM formulation).
-
-    Student learns to map (x_σ, σ) → x_0, matching teacher's CFG-guided ODE.
-    """
     bsz = latents.shape[0]
     device = latents.device
     N = len(sigmas)
 
-    # random sigma pair (σ_s > σ_t)
     index = torch.randint(0, N - 1, (bsz,), device=device)
     sigma_s = sigmas[index]
     sigma_t = sigmas[index + 1]
 
-    # add noise
     noise = torch.randn_like(latents)
     x_s = latents + sigma_s.view(-1, 1, 1, 1) * noise
 
-    # student prediction (no CFG — it learns the CFG'd result directly)
     student_pred = edm_forward(
         x_s, sigma_s, text_emb,
         student_dit.forward_without_cfg,
         edm_config
     )
 
-    # teacher prediction (with CFG) + Euler ODE step
-    with torch.no_grad():
+    with torch.no_grad(), torch.amp.autocast("cuda", dtype=weight_dtype):
         teacher_denoised = edm_forward(
             x_s.to(weight_dtype),
             sigma_s.to(weight_dtype),
@@ -73,11 +64,9 @@ def cd_loss(
             edm_config
         )
 
-        # Euler step: dx/dσ = (x - D(x;σ)) / σ
         d = (x_s.to(weight_dtype) - teacher_denoised) / sigma_s.view(-1, 1, 1, 1).to(weight_dtype)
         x_t = x_s.to(weight_dtype) + (sigma_t - sigma_s).view(-1, 1, 1, 1).to(weight_dtype) * d
 
-    # target: same student, stop-gradient
     with torch.no_grad():
         target = edm_forward(
             x_t.float(), sigma_t, text_emb,
@@ -85,14 +74,10 @@ def cd_loss(
             edm_config
         )
 
-    # loss
     if loss_type == "l2":
         loss = F.mse_loss(student_pred.float(), target.float())
     elif loss_type == "huber":
-        loss = torch.sqrt(
-            (student_pred.float() - target.float()) ** 2 + huber_c ** 2
-        ) - huber_c
-        loss = loss.mean()
+        loss = (torch.sqrt((student_pred.float() - target.float()) ** 2 + huber_c ** 2) - huber_c).mean()
     else:
         raise ValueError(f"Unknown loss type: {loss_type}")
 

@@ -3,11 +3,12 @@ torchvision
 accelerate
 diffusers
 transformers
-open_clip_torch
+open-clip-torch
 timm
 easydict
 einops
 torchmetrics
+composer
 datasets
 Pillow
 tqdm
